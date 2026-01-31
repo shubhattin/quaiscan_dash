@@ -4,6 +4,7 @@ import { api, QuaiTransaction } from "../utils/api";
 import { refreshBus } from "../utils/events";
 import { sharedState } from "../utils/state";
 import { AlertCircle, History, Activity } from "lucide-react";
+import { Skeleton } from "../components/ui/skeleton";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -32,9 +33,14 @@ function Dashboard() {
       if (balanceRes.status === "1") {
         const formatted = formatQuai(balanceRes.result);
         sharedState.setBalance(formatted);
+      } else {
+        sharedState.setBalance("0 QUAI");
       }
+
       if (txRes.status === "1") {
         setTransactions(txRes.result);
+      } else {
+        setTransactions([]);
       }
     } catch (err) {
       setError("Failed to fetch dashboard data. Check console for details.");
@@ -46,7 +52,6 @@ function Dashboard() {
 
   useEffect(() => {
     fetchData();
-    // Subscribe to refresh events from the header
     const unsub = refreshBus.subscribe(fetchData);
     return () => {
       unsub();
@@ -70,6 +75,16 @@ function Dashboard() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground transition-colors duration-300">
       <div className="p-8 max-w-7xl mx-auto space-y-8">
+        {/* Address Header - Optional context, keeping it minimal */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Account:</span>
+            <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono select-all">
+              {WALLET_ID}
+            </code>
+          </div>
+        </div>
+
         {error && (
           <div className="p-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
             <AlertCircle className="w-5 h-5 shrink-0" />
@@ -145,19 +160,19 @@ function Dashboard() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="px-6 py-5">
-                        <div className="h-4 bg-muted rounded-full w-24"></div>
+                        <Skeleton className="h-4 w-24 rounded-full" />
                       </td>
                       <td className="px-6 py-5">
-                        <div className="h-4 bg-muted rounded-full w-12"></div>
+                        <Skeleton className="h-4 w-12 rounded-full" />
                       </td>
                       <td className="px-6 py-5">
-                        <div className="h-4 bg-muted rounded-full w-48"></div>
+                        <Skeleton className="h-4 w-48 rounded-full" />
                       </td>
                       <td className="px-6 py-5">
-                        <div className="h-4 bg-muted rounded-full w-16 ml-auto"></div>
+                        <Skeleton className="h-4 w-16 ml-auto rounded-full" />
                       </td>
                       <td className="px-6 py-5">
-                        <div className="h-4 bg-muted rounded-full w-20 ml-auto"></div>
+                        <Skeleton className="h-4 w-20 ml-auto rounded-full" />
                       </td>
                     </tr>
                   ))
