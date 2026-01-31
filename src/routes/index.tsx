@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { api, QuaiTransaction } from "../utils/api";
 import { refreshBus } from "../utils/events";
 import { sharedState } from "../utils/state";
-import { AlertCircle, History, Activity } from "lucide-react";
+import { AlertCircle, History, Activity, Clock, Wifi } from "lucide-react";
 import { Skeleton } from "../components/ui/skeleton";
 
 export const Route = createFileRoute("/")({
@@ -18,11 +18,18 @@ const WALLET_ID = "0x002624Fa55DFf0ca53aF9166B4d44c16a294C4e0";
 function Dashboard() {
   const [transactions, setTransactions] = useState<QuaiTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isBackgroundFetching, setIsBackgroundFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState(api.getTrackerStats());
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [timeSinceUpdate, setTimeSinceUpdate] = useState<string>("just now");
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (isBackground = false) => {
+    if (isBackground) {
+      setIsBackgroundFetching(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const [balanceRes, txRes] = await Promise.all([
@@ -42,21 +49,51 @@ function Dashboard() {
       } else {
         setTransactions([]);
       }
+      setLastUpdated(new Date());
     } catch (err) {
-      setError("Failed to fetch dashboard data. Check console for details.");
+      // Don't show error for background fetches to avoid annoying popups
+      if (!isBackground) {
+        setError("Failed to fetch dashboard data. Check console for details.");
+      }
     } finally {
-      setLoading(false);
+      if (isBackground) {
+        setIsBackgroundFetching(false);
+      } else {
+        setLoading(false);
+      }
       setStats(api.getTrackerStats());
     }
   }, []);
 
+  // Initial fetch and subscription
   useEffect(() => {
     fetchData();
-    const unsub = refreshBus.subscribe(fetchData);
+    const unsub = refreshBus.subscribe(() => fetchData(false));
     return () => {
       unsub();
     };
   }, [fetchData]);
+
+  // Auto-refresh interval (every 15 seconds)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
+  // Update "time since" text every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const seconds = Math.floor(
+        (new Date().getTime() - lastUpdated.getTime()) / 1000,
+      );
+      if (seconds < 5) setTimeSinceUpdate("just now");
+      else if (seconds < 60) setTimeSinceUpdate(`${seconds}s ago`);
+      else setTimeSinceUpdate(`${Math.floor(seconds / 60)}m ago`);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lastUpdated]);
 
   const formatQuai = (wei: string) => {
     if (!wei) return "0";
@@ -76,12 +113,33 @@ function Dashboard() {
     <div className="min-h-[calc(100vh-4rem)] bg-background text-foreground transition-colors duration-300">
       <div className="p-8 max-w-7xl mx-auto space-y-8">
         {/* Address Header - Optional context, keeping it minimal */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Account:</span>
             <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono select-all">
               {WALLET_ID}
             </code>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Live Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-xs font-medium border border-green-500/20">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              Live Updates
+            </div>
+
+            {/* Last Updated */}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {isBackgroundFetching ? (
+                <Wifi className="w-3 h-3 animate-pulse text-primary" />
+              ) : (
+                <Clock className="w-3 h-3" />
+              )}
+              <span>Updated {timeSinceUpdate}</span>
+            </div>
           </div>
         </div>
 
