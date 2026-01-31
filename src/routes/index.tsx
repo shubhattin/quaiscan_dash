@@ -5,7 +5,12 @@ import { refreshBus } from "../utils/events";
 import { sharedState } from "../utils/state";
 import { AlertCircle, History, Activity } from "lucide-react";
 
-export const Route = createFileRoute("/")({ component: Dashboard });
+export const Route = createFileRoute("/")({
+  component: Dashboard,
+  head: () => ({
+    meta: [{ title: "QuaiScan Dashboard" }],
+  }),
+});
 
 const WALLET_ID = "0x002624Fa55DFf0ca53aF9166B4d44c16a294C4e0";
 
