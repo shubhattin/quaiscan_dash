@@ -6,9 +6,11 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
+    "start": "node .output/server/index.mjs",
     "test": "vitest run"
   },
   "dependencies": {
+    "nitro": "npm:nitro-nightly@latest",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
